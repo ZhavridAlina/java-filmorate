@@ -16,19 +16,19 @@ import java.util.Map;
 @RequestMapping("/films")
 public class FilmController {
     private final Map<Long, Film> films = new HashMap<>();
-    private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 
     @PostMapping
     public Film addFilm(@Valid @RequestBody Film film) {
         log.info("Получен запрос на добавление фильма:{}", film.getName());
-        if (isReleaseDateValid(film)) {
-            film.setId(getNextId());
-            films.put(film.getId(), film);
-            log.info("Фильм {} успешно добавлен", film.getName());
-            return film;
+        if (!film.isReleaseDateValid()) {
+            log.error("Ошибка валидации при добавлении фильма {}", film.getName());
+            throw new ValidationException("Ошибка при валидации фильма");
         }
-        log.error("Ошибка валидации при добавлении фильма {}", film.getName());
-        throw new ValidationException("Ошибка при валидации фильма");
+        film.setId(getNextId());
+        films.put(film.getId(), film);
+        log.info("Фильм {} успешно добавлен", film.getName());
+
+        return film;
     }
 
     @PutMapping
@@ -39,7 +39,7 @@ public class FilmController {
             throw new ValidationException("Id не может быть пустым");
         }
         if (films.containsKey(newFilm.getId())) {
-            if (!isReleaseDateValid(newFilm)) {
+            if (!newFilm.isReleaseDateValid()) {
                 log.error("Ошибка валидации при изменении фильма {}", newFilm.getId());
                 throw new ValidationException("Ошибка валидации фильма");
             }
@@ -55,13 +55,6 @@ public class FilmController {
     public Collection<Film> getAllFilms() {
         log.info("Получен запрос на получение списка всех фильмов");
         return films.values();
-    }
-
-    private boolean isReleaseDateValid(Film film) {
-        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
-            return false;
-        }
-        return true;
     }
 
     private long getNextId() {
