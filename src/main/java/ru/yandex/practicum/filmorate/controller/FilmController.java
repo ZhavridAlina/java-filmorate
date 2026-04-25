@@ -19,10 +19,6 @@ public class FilmController {
     @PostMapping
     public Film addFilm(@Valid @RequestBody Film film) {
         log.info("Получен запрос на добавление фильма:{}", film.getName());
-        if (!film.isReleaseDateValid()) {
-            log.error("Ошибка валидации при добавлении фильма {}", film.getName());
-            throw new ValidationException("Ошибка при валидации фильма");
-        }
         film.setId(getNextId());
         films.put(film.getId(), film);
         log.info("Фильм {} успешно добавлен", film.getName());
@@ -38,10 +34,6 @@ public class FilmController {
             throw new ValidationException("Id не может быть пустым");
         }
         if (films.containsKey(newFilm.getId())) {
-            if (!newFilm.isReleaseDateValid()) {
-                log.error("Ошибка валидации при изменении фильма {}", newFilm.getId());
-                throw new ValidationException("Ошибка валидации фильма");
-            }
             films.put(newFilm.getId(), newFilm);
             log.info("Фильм {} успешно изменен", newFilm.getName());
             return newFilm;
