@@ -48,11 +48,11 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public void deleteUser(User user) {
-        if (user.getId()==null){
+        if (user.getId() == null) {
             return;
         }
 
-        if (users.containsKey(user.getId())){
+        if (users.containsKey(user.getId())) {
             users.remove(user.getId());
         }
     }
