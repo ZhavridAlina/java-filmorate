@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @Data
 public class Film {
@@ -24,6 +25,8 @@ public class Film {
 
     @Positive(message = "Продолжительность должна быть положительным числом")
     private Integer duration;
+
+    private Set<Long> likes;
 
     @AssertTrue(message = "дата релиза не может быть раньше 28 декабря 1895 года")
     public boolean isReleaseDateValid() {
