@@ -20,9 +20,6 @@ public class InMemoryUserStorage implements UserStorage {
             newUser.setFriends(new HashSet<>());
         }
         newUser.setId(getNextId());
-        if (newUser.getName() == null || newUser.getName().isBlank()) {
-            newUser.setName(newUser.getLogin());
-        }
         users.put(newUser.getId(), newUser);
         return newUser;
     }
@@ -34,13 +31,7 @@ public class InMemoryUserStorage implements UserStorage {
         }
         if (users.containsKey(newUser.getId())) {
             User existing = users.get(newUser.getId());
-            if (newUser.getFriends() == null) {
-                newUser.setFriends(existing.getFriends());
-            }
-            if (newUser.getName() == null || newUser.getName().isBlank()) {
-                newUser.setName(newUser.getLogin());
-            }
-            users.put(newUser.getId(), newUser);
+            users.put(existing.getId(), newUser);
             return newUser;
         }
         throw new ResourceNotFoundException("Пользователь с id = " + newUser.getId() + " не найден");
