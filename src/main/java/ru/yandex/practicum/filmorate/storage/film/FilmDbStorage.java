@@ -22,7 +22,6 @@ import java.sql.Statement;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 @Component
 @Qualifier(StorageQualifier.FILM_DB)
