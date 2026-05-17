@@ -1,16 +1,22 @@
 package ru.yandex.practicum.filmorate.storage.user;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.ResourceNotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.StorageQualifier;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 
 @Component
+@Qualifier(StorageQualifier.USER_MEMORY)
 public class InMemoryUserStorage implements UserStorage {
     private final Map<Long, User> users = new HashMap<>();
 
@@ -31,6 +37,9 @@ public class InMemoryUserStorage implements UserStorage {
         }
         if (users.containsKey(newUser.getId())) {
             User existing = users.get(newUser.getId());
+            if (newUser.getFriends() == null) {
+                newUser.setFriends(existing.getFriends());
+            }
             users.put(existing.getId(), newUser);
             return newUser;
         }
@@ -42,10 +51,7 @@ public class InMemoryUserStorage implements UserStorage {
         if (user.getId() == null) {
             return;
         }
-
-        if (users.containsKey(user.getId())) {
-            users.remove(user.getId());
-        }
+        users.remove(user.getId());
     }
 
     @Override
@@ -60,6 +66,33 @@ public class InMemoryUserStorage implements UserStorage {
             throw new ResourceNotFoundException("Пользователь с id " + id + " не найден");
         }
         return user;
+    }
+
+    @Override
+    public Optional<User> findUserById(long id) {
+        return Optional.ofNullable(users.get(id));
+    }
+
+    @Override
+    public void addFriend(Long userId, Long friendId) {
+        if (Objects.equals(userId, friendId)) {
+            return;
+        }
+        User user = getUserById(userId);
+        getUserById(friendId);
+        user.getFriends().add(friendId);
+    }
+
+    @Override
+    public void removeFriend(Long userId, Long friendId) {
+        User user = getUserById(userId);
+        getUserById(friendId);
+        user.getFriends().remove(friendId);
+    }
+
+    @Override
+    public Set<Long> getFriendIds(Long userId) {
+        return new HashSet<>(getUserById(userId).getFriends());
     }
 
     private long getNextId() {

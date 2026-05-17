@@ -1,15 +1,19 @@
 package ru.yandex.practicum.filmorate.storage.film;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.ResourceNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.storage.StorageQualifier;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 
 @Component
+@Qualifier(StorageQualifier.FILM_MEMORY)
 public class InMemoryFilmStorage implements FilmStorage {
     private final Map<Long, Film> films = new HashMap<>();
 
@@ -18,9 +22,11 @@ public class InMemoryFilmStorage implements FilmStorage {
         if (newFilm.getLikes() == null) {
             newFilm.setLikes(new HashSet<>());
         }
+        if (newFilm.getGenres() == null) {
+            newFilm.setGenres(new LinkedHashSet<>());
+        }
         newFilm.setId(getNextId());
         films.put(newFilm.getId(), newFilm);
-
         return newFilm;
     }
 
@@ -29,10 +35,15 @@ public class InMemoryFilmStorage implements FilmStorage {
         if (!films.containsKey(newFilm.getId())) {
             throw new ResourceNotFoundException("Фильм с id = " + newFilm.getId() + " не найден");
         }
-
+        Film existing = films.get(newFilm.getId());
+        if (newFilm.getLikes() == null) {
+            newFilm.setLikes(existing.getLikes());
+        }
+        if (newFilm.getGenres() == null) {
+            newFilm.setGenres(existing.getGenres());
+        }
         films.put(newFilm.getId(), newFilm);
         return newFilm;
-
     }
 
     @Override
@@ -54,6 +65,21 @@ public class InMemoryFilmStorage implements FilmStorage {
             throw new ResourceNotFoundException("Фильм с id " + id + " не найден");
         }
         return film;
+    }
+
+    @Override
+    public void addLike(Long filmId, Long userId) {
+        getFilmById(filmId).getLikes().add(userId);
+    }
+
+    @Override
+    public void removeLike(Long filmId, Long userId) {
+        getFilmById(filmId).getLikes().remove(userId);
+    }
+
+    @Override
+    public int getLikesCount(Long filmId) {
+        return getFilmById(filmId).getLikes().size();
     }
 
     private long getNextId() {
