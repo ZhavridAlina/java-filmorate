@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.storage.user;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -10,7 +9,6 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.ResourceNotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.StorageQualifier;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -22,7 +20,6 @@ import java.util.Optional;
 import java.util.Set;
 
 @Component
-@Qualifier(StorageQualifier.USER_DB)
 @RequiredArgsConstructor
 public class UserDbStorage implements UserStorage {
 
@@ -35,14 +32,10 @@ public class UserDbStorage implements UserStorage {
     private static final String SELECT_USER_BY_ID = "SELECT * FROM users WHERE user_id = ?";
     private static final String SELECT_FRIENDS = "SELECT friend_id FROM friends WHERE user_id = ?";
     private static final String INSERT_FRIEND =
-            "INSERT INTO friends (user_id, friend_id, confirmed) VALUES (?, ?, ?)";
+            "INSERT INTO friends (user_id, friend_id) VALUES (?, ?)";
     private static final String DELETE_FRIEND = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
-    private static final String CONFIRM_FRIEND =
-            "UPDATE friends SET confirmed = true WHERE user_id = ? AND friend_id = ?";
     private static final String COUNT_FRIENDSHIP =
             "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?";
-    private static final String COUNT_UNCONFIRMED_REVERSE =
-            "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ? AND confirmed = false";
 
     private final JdbcTemplate jdbcTemplate;
     private final UserRowMapper userRowMapper;
@@ -125,20 +118,16 @@ public class UserDbStorage implements UserStorage {
         getUserById(userId);
         getUserById(friendId);
 
-        Integer reverseRequest = jdbcTemplate.queryForObject(
-                COUNT_UNCONFIRMED_REVERSE, Integer.class, friendId, userId);
-        if (reverseRequest != null && reverseRequest > 0) {
-            jdbcTemplate.update(CONFIRM_FRIEND, friendId, userId);
-        }
-
         Integer exists = jdbcTemplate.queryForObject(COUNT_FRIENDSHIP, Integer.class, userId, friendId);
         if (exists == null || exists == 0) {
-            jdbcTemplate.update(INSERT_FRIEND, userId, friendId, false);
+            jdbcTemplate.update(INSERT_FRIEND, userId, friendId);
         }
     }
 
     @Override
     public void removeFriend(Long userId, Long friendId) {
+        getUserById(userId);
+        getUserById(friendId);
         jdbcTemplate.update(DELETE_FRIEND, userId, friendId);
     }
 

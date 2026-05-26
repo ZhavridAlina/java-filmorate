@@ -1,8 +1,8 @@
 package ru.yandex.practicum.filmorate.storage.film;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -11,31 +11,35 @@ import ru.yandex.practicum.filmorate.exception.ResourceNotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.model.Mpa;
-import ru.yandex.practicum.filmorate.storage.StorageQualifier;
 import ru.yandex.practicum.filmorate.storage.genre.GenreRowMapper;
-import ru.yandex.practicum.filmorate.storage.mpa.MpaRowMapper;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
 import java.sql.Statement;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 
 @Component
-@Qualifier(StorageQualifier.FILM_DB)
 @RequiredArgsConstructor
 public class FilmDbStorage implements FilmStorage {
+
+    private static final String SELECT_FILM_FIELDS =
+            "SELECT f.film_id, f.name, f.description, f.release_date, f.duration, "
+                    + "f.mpa_id, m.name AS mpa_name "
+                    + "FROM films f LEFT JOIN mpa m ON f.mpa_id = m.mpa_id";
 
     private static final String INSERT_FILM =
             "INSERT INTO films (name, description, release_date, duration, mpa_id) VALUES (?, ?, ?, ?, ?)";
     private static final String UPDATE_FILM =
             "UPDATE films SET name = ?, description = ?, release_date = ?, duration = ?, mpa_id = ? WHERE film_id = ?";
     private static final String DELETE_FILM = "DELETE FROM films WHERE film_id = ?";
-    private static final String SELECT_ALL_FILMS = "SELECT * FROM films";
-    private static final String SELECT_FILM_BY_ID = "SELECT * FROM films WHERE film_id = ?";
-    private static final String SELECT_MPA = "SELECT * FROM mpa WHERE mpa_id = ?";
+
+    private static final String SELECT_ALL_FILMS = SELECT_FILM_FIELDS;
+    private static final String SELECT_FILM_BY_ID = SELECT_FILM_FIELDS + " WHERE f.film_id = ?";
+
     private static final String SELECT_GENRES =
             "SELECT g.* FROM genre g JOIN film_genre fg ON g.genre_id = fg.genre_id "
                     + "WHERE fg.film_id = ? ORDER BY g.genre_id";
@@ -50,7 +54,7 @@ public class FilmDbStorage implements FilmStorage {
 
     private final JdbcTemplate jdbcTemplate;
     private final FilmRowMapper filmRowMapper;
-    private final MpaRowMapper mpaRowMapper;
+
     private final GenreRowMapper genreRowMapper;
 
     @Override
@@ -76,7 +80,8 @@ public class FilmDbStorage implements FilmStorage {
         }
         newFilm.setId(key.longValue());
         saveGenres(newFilm);
-        return enrichFilm(newFilm);
+
+        return getFilmById(newFilm.getId());
     }
 
     @Override
@@ -141,10 +146,6 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private Film enrichFilm(Film film) {
-        if (film.getMpa() != null && film.getMpa().getId() != null) {
-            Mpa mpa = jdbcTemplate.queryForObject(SELECT_MPA, mpaRowMapper, film.getMpa().getId());
-            film.setMpa(mpa);
-        }
         List<Genre> genres = jdbcTemplate.query(SELECT_GENRES, genreRowMapper, film.getId());
         film.setGenres(new LinkedHashSet<>(genres));
         List<Long> likes = jdbcTemplate.queryForList(SELECT_LIKES, Long.class, film.getId());
@@ -157,11 +158,24 @@ public class FilmDbStorage implements FilmStorage {
         if (film.getGenres() == null || film.getGenres().isEmpty()) {
             return;
         }
-        for (Genre genre : film.getGenres()) {
-            if (genre.getId() != null) {
-                jdbcTemplate.update(INSERT_FILM_GENRE, film.getId(), genre.getId());
-            }
+        List<Genre> genres = film.getGenres().stream()
+                .filter(g -> g.getId() != null)
+                .toList();
+        if (genres.isEmpty()) {
+            return;
         }
+        jdbcTemplate.batchUpdate(INSERT_FILM_GENRE, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                ps.setLong(1, film.getId());
+                ps.setLong(2, genres.get(i).getId());
+            }
+
+            @Override
+            public int getBatchSize() {
+                return genres.size();
+            }
+        });
     }
 
     private Long extractMpaId(Film film) {

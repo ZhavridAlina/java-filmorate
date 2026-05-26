@@ -1,11 +1,10 @@
 package ru.yandex.practicum.filmorate.service;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.ResourceNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.storage.StorageQualifier;
+
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.mpa.MpaStorage;
@@ -21,9 +20,9 @@ public class FilmService {
     private final UserStorage userStorage;
     private final MpaStorage mpaStorage;
     private final GenreStorage genreStorage;
-
-    public FilmService(@Qualifier(StorageQualifier.FILM_DB) FilmStorage filmStorage,
-                       @Qualifier(StorageQualifier.USER_DB) UserStorage userStorage,
+    
+    public FilmService(FilmStorage filmStorage,
+                       UserStorage userStorage,
                        MpaStorage mpaStorage,
                        GenreStorage genreStorage) {
         this.filmStorage = filmStorage;
