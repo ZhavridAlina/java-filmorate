@@ -20,7 +20,7 @@ public class FilmService {
     private final UserStorage userStorage;
     private final MpaStorage mpaStorage;
     private final GenreStorage genreStorage;
-    
+
     public FilmService(FilmStorage filmStorage,
                        UserStorage userStorage,
                        MpaStorage mpaStorage,
